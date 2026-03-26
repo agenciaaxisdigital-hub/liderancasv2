@@ -418,6 +418,77 @@ export type Database = {
           },
         ]
       }
+      fiscais: {
+        Row: {
+          cadastrado_por: string | null
+          colegio_eleitoral: string | null
+          criado_em: string | null
+          id: string
+          lideranca_id: string | null
+          observacoes: string | null
+          pessoa_id: string
+          secao_fiscal: string | null
+          status: string | null
+          suplente_id: string | null
+          zona_fiscal: string | null
+        }
+        Insert: {
+          cadastrado_por?: string | null
+          colegio_eleitoral?: string | null
+          criado_em?: string | null
+          id?: string
+          lideranca_id?: string | null
+          observacoes?: string | null
+          pessoa_id: string
+          secao_fiscal?: string | null
+          status?: string | null
+          suplente_id?: string | null
+          zona_fiscal?: string | null
+        }
+        Update: {
+          cadastrado_por?: string | null
+          colegio_eleitoral?: string | null
+          criado_em?: string | null
+          id?: string
+          lideranca_id?: string | null
+          observacoes?: string | null
+          pessoa_id?: string
+          secao_fiscal?: string | null
+          status?: string | null
+          suplente_id?: string | null
+          zona_fiscal?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fiscais_cadastrado_por_fkey"
+            columns: ["cadastrado_por"]
+            isOneToOne: false
+            referencedRelation: "hierarquia_usuarios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fiscais_lideranca_id_fkey"
+            columns: ["lideranca_id"]
+            isOneToOne: false
+            referencedRelation: "liderancas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fiscais_pessoa_id_fkey"
+            columns: ["pessoa_id"]
+            isOneToOne: false
+            referencedRelation: "pessoas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fiscais_suplente_id_fkey"
+            columns: ["suplente_id"]
+            isOneToOne: false
+            referencedRelation: "suplentes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       fornecedores: {
         Row: {
           agencia: string | null
@@ -569,14 +640,65 @@ export type Database = {
           },
         ]
       }
+      hierarquia_usuarios: {
+        Row: {
+          ativo: boolean | null
+          atualizado_em: string | null
+          auth_user_id: string | null
+          criado_em: string | null
+          id: string
+          nome: string
+          superior_id: string | null
+          suplente_id: string | null
+          tipo: Database["public"]["Enums"]["tipo_usuario"]
+        }
+        Insert: {
+          ativo?: boolean | null
+          atualizado_em?: string | null
+          auth_user_id?: string | null
+          criado_em?: string | null
+          id?: string
+          nome: string
+          superior_id?: string | null
+          suplente_id?: string | null
+          tipo: Database["public"]["Enums"]["tipo_usuario"]
+        }
+        Update: {
+          ativo?: boolean | null
+          atualizado_em?: string | null
+          auth_user_id?: string | null
+          criado_em?: string | null
+          id?: string
+          nome?: string
+          superior_id?: string | null
+          suplente_id?: string | null
+          tipo?: Database["public"]["Enums"]["tipo_usuario"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hierarquia_usuarios_superior_id_fkey"
+            columns: ["superior_id"]
+            isOneToOne: false
+            referencedRelation: "hierarquia_usuarios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hierarquia_usuarios_suplente_id_fkey"
+            columns: ["suplente_id"]
+            isOneToOne: false
+            referencedRelation: "suplentes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       liderancas: {
         Row: {
           apoiadores_estimados: number | null
-          atualizado_em: string
+          atualizado_em: string | null
           bairros_influencia: string | null
           cadastrado_por: string | null
           comunidades_influencia: string | null
-          criado_em: string
+          criado_em: string | null
           id: string
           lider_principal_id: string | null
           meta_votos: number | null
@@ -586,17 +708,18 @@ export type Database = {
           origem_captacao: string | null
           pessoa_id: string
           regiao_atuacao: string | null
-          status: string
+          status: string | null
+          suplente_id: string | null
           tipo_lideranca: string | null
           zona_atuacao: string | null
         }
         Insert: {
           apoiadores_estimados?: number | null
-          atualizado_em?: string
+          atualizado_em?: string | null
           bairros_influencia?: string | null
           cadastrado_por?: string | null
           comunidades_influencia?: string | null
-          criado_em?: string
+          criado_em?: string | null
           id?: string
           lider_principal_id?: string | null
           meta_votos?: number | null
@@ -606,17 +729,18 @@ export type Database = {
           origem_captacao?: string | null
           pessoa_id: string
           regiao_atuacao?: string | null
-          status?: string
+          status?: string | null
+          suplente_id?: string | null
           tipo_lideranca?: string | null
           zona_atuacao?: string | null
         }
         Update: {
           apoiadores_estimados?: number | null
-          atualizado_em?: string
+          atualizado_em?: string | null
           bairros_influencia?: string | null
           cadastrado_por?: string | null
           comunidades_influencia?: string | null
-          criado_em?: string
+          criado_em?: string | null
           id?: string
           lider_principal_id?: string | null
           meta_votos?: number | null
@@ -626,7 +750,8 @@ export type Database = {
           origem_captacao?: string | null
           pessoa_id?: string
           regiao_atuacao?: string | null
-          status?: string
+          status?: string | null
+          suplente_id?: string | null
           tipo_lideranca?: string | null
           zona_atuacao?: string | null
         }
@@ -635,7 +760,7 @@ export type Database = {
             foreignKeyName: "liderancas_cadastrado_por_fkey"
             columns: ["cadastrado_por"]
             isOneToOne: false
-            referencedRelation: "usuarios"
+            referencedRelation: "hierarquia_usuarios"
             referencedColumns: ["id"]
           },
           {
@@ -650,6 +775,13 @@ export type Database = {
             columns: ["pessoa_id"]
             isOneToOne: false
             referencedRelation: "pessoas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "liderancas_suplente_id_fkey"
+            columns: ["suplente_id"]
+            isOneToOne: false
+            referencedRelation: "suplentes"
             referencedColumns: ["id"]
           },
         ]
@@ -735,6 +867,7 @@ export type Database = {
           colegio_eleitoral: string | null
           cpf: string | null
           criado_em: string
+          data_nascimento: string | null
           email: string | null
           endereco_colegio: string | null
           facebook: string | null
@@ -742,6 +875,9 @@ export type Database = {
           instagram: string | null
           municipio_eleitoral: string | null
           nome: string
+          observacoes_gerais: string | null
+          origem: string | null
+          outras_redes: string | null
           secao_eleitoral: string | null
           situacao_titulo: string | null
           telefone: string | null
@@ -755,6 +891,7 @@ export type Database = {
           colegio_eleitoral?: string | null
           cpf?: string | null
           criado_em?: string
+          data_nascimento?: string | null
           email?: string | null
           endereco_colegio?: string | null
           facebook?: string | null
@@ -762,6 +899,9 @@ export type Database = {
           instagram?: string | null
           municipio_eleitoral?: string | null
           nome: string
+          observacoes_gerais?: string | null
+          origem?: string | null
+          outras_redes?: string | null
           secao_eleitoral?: string | null
           situacao_titulo?: string | null
           telefone?: string | null
@@ -775,6 +915,7 @@ export type Database = {
           colegio_eleitoral?: string | null
           cpf?: string | null
           criado_em?: string
+          data_nascimento?: string | null
           email?: string | null
           endereco_colegio?: string | null
           facebook?: string | null
@@ -782,6 +923,9 @@ export type Database = {
           instagram?: string | null
           municipio_eleitoral?: string | null
           nome?: string
+          observacoes_gerais?: string | null
+          origem?: string | null
+          outras_redes?: string | null
           secao_eleitoral?: string | null
           situacao_titulo?: string | null
           telefone?: string | null
@@ -791,6 +935,78 @@ export type Database = {
           zona_eleitoral?: string | null
         }
         Relationships: []
+      }
+      possiveis_eleitores: {
+        Row: {
+          cadastrado_por: string | null
+          compromisso_voto: string | null
+          criado_em: string | null
+          fiscal_id: string | null
+          id: string
+          lideranca_id: string | null
+          observacoes: string | null
+          pessoa_id: string
+          suplente_id: string | null
+        }
+        Insert: {
+          cadastrado_por?: string | null
+          compromisso_voto?: string | null
+          criado_em?: string | null
+          fiscal_id?: string | null
+          id?: string
+          lideranca_id?: string | null
+          observacoes?: string | null
+          pessoa_id: string
+          suplente_id?: string | null
+        }
+        Update: {
+          cadastrado_por?: string | null
+          compromisso_voto?: string | null
+          criado_em?: string | null
+          fiscal_id?: string | null
+          id?: string
+          lideranca_id?: string | null
+          observacoes?: string | null
+          pessoa_id?: string
+          suplente_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "possiveis_eleitores_cadastrado_por_fkey"
+            columns: ["cadastrado_por"]
+            isOneToOne: false
+            referencedRelation: "hierarquia_usuarios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "possiveis_eleitores_fiscal_id_fkey"
+            columns: ["fiscal_id"]
+            isOneToOne: false
+            referencedRelation: "fiscais"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "possiveis_eleitores_lideranca_id_fkey"
+            columns: ["lideranca_id"]
+            isOneToOne: false
+            referencedRelation: "liderancas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "possiveis_eleitores_pessoa_id_fkey"
+            columns: ["pessoa_id"]
+            isOneToOne: false
+            referencedRelation: "pessoas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "possiveis_eleitores_suplente_id_fkey"
+            columns: ["suplente_id"]
+            isOneToOne: false
+            referencedRelation: "suplentes"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       roles_painel: {
         Row: {
@@ -831,6 +1047,84 @@ export type Database = {
           criado_em?: string
           id?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      suplentes: {
+        Row: {
+          ano_eleicao: number | null
+          assinatura: string | null
+          base_politica: string | null
+          cargo_disputado: string | null
+          created_at: string
+          expectativa_votos: number | null
+          fiscais_qtd: number | null
+          fiscais_valor_unit: number | null
+          id: string
+          liderancas_qtd: number | null
+          liderancas_valor_unit: number | null
+          nome: string
+          partido: string | null
+          plotagem_qtd: number | null
+          plotagem_valor_unit: number | null
+          regiao_atuacao: string | null
+          retirada_mensal_meses: number | null
+          retirada_mensal_valor: number | null
+          situacao: string | null
+          telefone: string | null
+          total_campanha: number | null
+          total_votos: number | null
+          updated_at: string
+        }
+        Insert: {
+          ano_eleicao?: number | null
+          assinatura?: string | null
+          base_politica?: string | null
+          cargo_disputado?: string | null
+          created_at?: string
+          expectativa_votos?: number | null
+          fiscais_qtd?: number | null
+          fiscais_valor_unit?: number | null
+          id?: string
+          liderancas_qtd?: number | null
+          liderancas_valor_unit?: number | null
+          nome: string
+          partido?: string | null
+          plotagem_qtd?: number | null
+          plotagem_valor_unit?: number | null
+          regiao_atuacao?: string | null
+          retirada_mensal_meses?: number | null
+          retirada_mensal_valor?: number | null
+          situacao?: string | null
+          telefone?: string | null
+          total_campanha?: number | null
+          total_votos?: number | null
+          updated_at?: string
+        }
+        Update: {
+          ano_eleicao?: number | null
+          assinatura?: string | null
+          base_politica?: string | null
+          cargo_disputado?: string | null
+          created_at?: string
+          expectativa_votos?: number | null
+          fiscais_qtd?: number | null
+          fiscais_valor_unit?: number | null
+          id?: string
+          liderancas_qtd?: number | null
+          liderancas_valor_unit?: number | null
+          nome?: string
+          partido?: string | null
+          plotagem_qtd?: number | null
+          plotagem_valor_unit?: number | null
+          regiao_atuacao?: string | null
+          retirada_mensal_meses?: number | null
+          retirada_mensal_valor?: number | null
+          situacao?: string | null
+          telefone?: string | null
+          total_campanha?: number | null
+          total_votos?: number | null
+          updated_at?: string
         }
         Relationships: []
       }
@@ -890,6 +1184,14 @@ export type Database = {
       criar_primeiro_admin: { Args: { _email: string }; Returns: undefined }
       eh_admin: { Args: { _user_id: string }; Returns: boolean }
       eh_admin_painel: { Args: { _user_id: string }; Returns: boolean }
+      eh_super_admin: { Args: never; Returns: boolean }
+      get_meu_suplente_id: { Args: never; Returns: string }
+      get_meu_tipo: {
+        Args: never
+        Returns: Database["public"]["Enums"]["tipo_usuario"]
+      }
+      get_meu_usuario_id: { Args: never; Returns: string }
+      get_subordinados: { Args: { usuario_id: string }; Returns: string[] }
       get_usuario_id: { Args: never; Returns: string }
       is_app_admin: { Args: never; Returns: boolean }
       tem_cargo: {
@@ -909,6 +1211,12 @@ export type Database = {
     }
     Enums: {
       cargo_admin: "super_admin" | "admin" | "editor"
+      tipo_usuario:
+        | "super_admin"
+        | "coordenador"
+        | "suplente"
+        | "lideranca"
+        | "fiscal"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1037,6 +1345,13 @@ export const Constants = {
   public: {
     Enums: {
       cargo_admin: ["super_admin", "admin", "editor"],
+      tipo_usuario: [
+        "super_admin",
+        "coordenador",
+        "suplente",
+        "lideranca",
+        "fiscal",
+      ],
     },
   },
 } as const
