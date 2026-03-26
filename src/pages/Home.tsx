@@ -39,6 +39,7 @@ export default function Home() {
     if (activeTab === 'liderancas') return isAdmin ? 'Todas as Lideranças' : 'Minhas Lideranças';
     if (activeTab === 'fiscais') return isAdmin ? 'Todos os Fiscais' : 'Meus Fiscais';
     if (activeTab === 'eleitores') return isAdmin ? 'Todos os Eleitores' : 'Meus Eleitores';
+    if (activeTab === 'rede') return 'Rede por Suplente';
     if (activeTab === 'cadastrar') {
       if (tipoUsuario === 'fiscal') return 'Cadastrar Eleitor';
       if (tipoUsuario === 'lideranca') return 'Cadastrar Fiscal';
