@@ -43,8 +43,12 @@ export default function TabPerfil() {
   };
 
   const fetchSuplentes = async () => {
-    const { data } = await supabase.from('suplentes').select('id, nome, regiao_atuacao').order('nome');
-    if (data) setSuplentes(data);
+    try {
+      const { data, error } = await supabase.functions.invoke('buscar-suplentes');
+      if (!error && data) setSuplentes(data);
+    } catch (err) {
+      console.error('Erro ao buscar suplentes:', err);
+    }
   };
 
   useEffect(() => {
