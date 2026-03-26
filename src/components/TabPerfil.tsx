@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth, TipoUsuario } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-import { LogOut, Shield, User, UserPlus, Loader2, Crown, Users, Eye } from 'lucide-react';
+import { LogOut, Shield, User, UserPlus, Loader2, Crown, Users, Eye, ChevronDown } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 
 const tipoLabels: Record<TipoUsuario, string> = {
@@ -20,37 +20,66 @@ const tipoIcons: Record<TipoUsuario, typeof Shield> = {
   fiscal: Eye,
 };
 
+interface SuplenteOption {
+  id: string;
+  nome: string;
+  regiao_atuacao: string | null;
+}
+
 export default function TabPerfil() {
   const { usuario, isAdmin, tipoUsuario, signOut } = useAuth();
-  const [usuarios, setUsuarios] = useState<{ id: string; nome: string; tipo: string; criado_em: string }[]>([]);
+  const [usuarios, setUsuarios] = useState<{ id: string; nome: string; tipo: string; criado_em: string; suplente_id: string | null }[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [showForm, setShowForm] = useState(false);
-  const [novoNome, setNovoNome] = useState('');
   const [novoSenha, setNovoSenha] = useState('');
-  const [novoTipo, setNovoTipo] = useState<string>('suplente');
   const [criando, setCriando] = useState(false);
+  const [suplentes, setSuplentes] = useState<SuplenteOption[]>([]);
+  const [selectedSuplenteId, setSelectedSuplenteId] = useState('');
 
   const fetchUsuarios = async () => {
-    const { data } = await supabase.from('hierarquia_usuarios').select('id, nome, tipo, criado_em').eq('ativo', true).order('criado_em', { ascending: false });
+    const { data } = await supabase.from('hierarquia_usuarios').select('id, nome, tipo, criado_em, suplente_id').eq('ativo', true).order('criado_em', { ascending: false });
     if (data) setUsuarios(data);
     setLoaded(true);
   };
 
+  const fetchSuplentes = async () => {
+    const { data } = await supabase.from('suplentes').select('id, nome, regiao_atuacao').order('nome');
+    if (data) setSuplentes(data);
+  };
+
   useEffect(() => {
-    if (isAdmin && !loaded) fetchUsuarios();
+    if (isAdmin && !loaded) {
+      fetchUsuarios();
+      fetchSuplentes();
+    }
   }, [isAdmin]);
 
+  // Filter suplentes that don't already have a user
+  const suplentesJaVinculados = new Set(usuarios.filter(u => u.suplente_id).map(u => u.suplente_id));
+  const suplentesDisponiveis = suplentes.filter(s => !suplentesJaVinculados.has(s.id));
+
+  const selectedSuplente = suplentes.find(s => s.id === selectedSuplenteId);
+
   const handleCriar = async () => {
-    if (!novoNome.trim() || !novoSenha.trim()) return;
+    if (!selectedSuplenteId || !novoSenha.trim()) return;
+    if (!selectedSuplente) return;
     setCriando(true);
     try {
       const { data, error } = await supabase.functions.invoke('criar-usuario', {
-        body: { nome: novoNome.trim(), senha: novoSenha, tipo: novoTipo, superior_id: usuario?.id },
+        body: {
+          nome: selectedSuplente.nome.trim(),
+          senha: novoSenha,
+          tipo: 'suplente',
+          superior_id: usuario?.id,
+          suplente_id: selectedSuplenteId,
+        },
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
-      toast({ title: `✅ Usuário "${novoNome.trim()}" criado!` });
-      setNovoNome(''); setNovoSenha(''); setNovoTipo('suplente'); setShowForm(false);
+      toast({ title: `✅ Usuário "${selectedSuplente.nome}" criado!` });
+      setNovoSenha('');
+      setSelectedSuplenteId('');
+      setShowForm(false);
       fetchUsuarios();
     } catch (err: any) {
       toast({ title: 'Erro ao criar', description: err.message, variant: 'destructive' });
@@ -58,8 +87,14 @@ export default function TabPerfil() {
   };
 
   const inputCls = "w-full h-10 px-3 bg-card border border-border rounded-xl text-sm text-foreground outline-none focus:ring-2 focus:ring-primary/30";
-
+  const selectCls = inputCls;
   const IconComponent = tipoUsuario ? tipoIcons[tipoUsuario] : User;
+
+  // Find suplente name for a user
+  const getSuplenteNome = (suplente_id: string | null) => {
+    if (!suplente_id) return null;
+    return suplentes.find(s => s.id === suplente_id)?.nome || null;
+  };
 
   return (
     <div className="space-y-4 pb-24">
@@ -89,20 +124,45 @@ export default function TabPerfil() {
 
           {showForm && (
             <div className="bg-muted/50 border border-border rounded-xl p-3 space-y-2">
-              <p className="text-xs font-semibold text-foreground">Criar novo usuário</p>
-              <input type="text" value={novoNome} onChange={e => setNovoNome(e.target.value)} placeholder="Nome do usuário" className={inputCls} />
-              <input type="text" value={novoSenha} onChange={e => setNovoSenha(e.target.value)} placeholder="Senha" className={inputCls} />
-              <div className="grid grid-cols-2 gap-2">
-                {(['suplente', 'coordenador', 'lideranca', 'fiscal'] as const).map(t => (
-                  <button key={t} onClick={() => setNovoTipo(t)}
-                    className={`h-9 rounded-xl text-xs font-medium border transition-all ${novoTipo === t ? 'bg-primary text-primary-foreground border-primary' : 'bg-card text-muted-foreground border-border'}`}>
-                    {tipoLabels[t]}
-                  </button>
+              <p className="text-xs font-semibold text-foreground">Criar acesso para suplente</p>
+              <p className="text-[10px] text-muted-foreground">Selecione o suplente já cadastrado e defina uma senha para ele acessar o app.</p>
+
+              <select
+                value={selectedSuplenteId}
+                onChange={e => setSelectedSuplenteId(e.target.value)}
+                className={selectCls}
+              >
+                <option value="">Selecione o suplente...</option>
+                {suplentesDisponiveis.map(s => (
+                  <option key={s.id} value={s.id}>
+                    {s.nome}{s.regiao_atuacao ? ` — ${s.regiao_atuacao}` : ''}
+                  </option>
                 ))}
-              </div>
-              <button onClick={handleCriar} disabled={criando || !novoNome.trim() || !novoSenha.trim()}
-                className="w-full h-10 rounded-xl text-sm font-semibold bg-primary text-primary-foreground disabled:opacity-50 active:scale-[0.97] transition-all flex items-center justify-center gap-2">
-                {criando ? <><Loader2 size={14} className="animate-spin" /> Criando...</> : 'Criar Usuário'}
+              </select>
+
+              {selectedSuplente && (
+                <div className="bg-primary/5 border border-primary/20 rounded-lg p-2">
+                  <p className="text-xs font-semibold text-primary">{selectedSuplente.nome}</p>
+                  {selectedSuplente.regiao_atuacao && (
+                    <p className="text-[10px] text-muted-foreground">{selectedSuplente.regiao_atuacao}</p>
+                  )}
+                </div>
+              )}
+
+              <input
+                type="text"
+                value={novoSenha}
+                onChange={e => setNovoSenha(e.target.value)}
+                placeholder="Senha de acesso"
+                className={inputCls}
+              />
+
+              <button
+                onClick={handleCriar}
+                disabled={criando || !selectedSuplenteId || !novoSenha.trim()}
+                className="w-full h-10 rounded-xl text-sm font-semibold bg-primary text-primary-foreground disabled:opacity-50 active:scale-[0.97] transition-all flex items-center justify-center gap-2"
+              >
+                {criando ? <><Loader2 size={14} className="animate-spin" /> Criando...</> : 'Criar Acesso'}
               </button>
             </div>
           )}
@@ -119,7 +179,10 @@ export default function TabPerfil() {
                     {(u.tipo === 'super_admin' || u.tipo === 'coordenador') && <Shield size={12} className="text-primary shrink-0" />}
                   </div>
                   <p className="text-[10px] text-muted-foreground">
-                    {tipoLabels[u.tipo as TipoUsuario] || u.tipo} · Desde {new Date(u.criado_em).toLocaleDateString('pt-BR')}
+                    {tipoLabels[u.tipo as TipoUsuario] || u.tipo}
+                    {getSuplenteNome(u.suplente_id) ? ` · ${getSuplenteNome(u.suplente_id)}` : ''}
+                    {' · Desde '}
+                    {new Date(u.criado_em).toLocaleDateString('pt-BR')}
                   </p>
                 </div>
               </div>
