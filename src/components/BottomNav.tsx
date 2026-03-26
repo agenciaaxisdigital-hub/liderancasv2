@@ -34,6 +34,11 @@ export default function BottomNav({ active, onChange }: Props) {
     tabs.push({ id: 'eleitores', icon: Users, label: 'Eleitores' });
   }
 
+  // Admin sees full network view by suplente
+  if (tipoUsuario === 'super_admin' || tipoUsuario === 'coordenador') {
+    tabs.push({ id: 'rede', icon: Network, label: 'Rede' });
+  }
+
   tabs.push({ id: 'perfil', icon: UserCircle, label: 'Perfil' });
 
   return (
