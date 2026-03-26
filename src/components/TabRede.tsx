@@ -55,8 +55,12 @@ export default function TabRede() {
 
   const fetchSuplentes = async () => {
     setLoading(true);
-    const { data } = await supabase.from('suplentes').select('id, nome, regiao_atuacao, telefone, partido').order('nome');
-    if (data) setSuplenetes(data);
+    try {
+      const { data, error } = await supabase.functions.invoke('buscar-suplentes');
+      if (!error && data) setSuplenetes(data);
+    } catch (err) {
+      console.error('Erro ao buscar suplentes:', err);
+    }
     setLoading(false);
   };
 
