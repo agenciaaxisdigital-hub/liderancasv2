@@ -46,7 +46,6 @@ export default function TabCadastrar({ onSaved }: Props) {
   const update = useCallback((field: string, value: string) => setForm(f => ({ ...f, [field]: value })), []);
   const cpfTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Quando CPF completo, busca local + valida na API
   const validarCPF = useCallback(async (cpfClean: string) => {
     if (cpfClean.length !== 11 || !validateCPF(cpfClean)) {
       if (cpfClean.length === 11) toast({ title: 'CPF inválido', variant: 'destructive' });
@@ -97,6 +96,14 @@ export default function TabCadastrar({ onSaved }: Props) {
     }
   };
 
+  // Get suplente_id: if user is suplente, use their suplente_id; otherwise traverse hierarchy
+  const getSuplementeId = (): string | null => {
+    if (!usuario) return null;
+    if (usuario.tipo === 'suplente') return usuario.suplente_id;
+    // For liderança/fiscal, suplente_id should be resolved server-side via get_meu_suplente_id()
+    return usuario.suplente_id || null;
+  };
+
   const handleSave = async () => {
     if (!form.nome.trim()) { toast({ title: 'Preencha o nome', variant: 'destructive' }); return; }
     if (!form.telefone.trim() && !form.whatsapp.trim()) { toast({ title: 'Informe telefone ou WhatsApp', variant: 'destructive' }); return; }
@@ -130,6 +137,8 @@ export default function TabCadastrar({ onSaved }: Props) {
         pessoaId = novaPessoa!.id;
       }
 
+      const suplenteId = getSuplementeId();
+
       const { error: lError } = await supabase.from('liderancas').insert({
         pessoa_id: pessoaId, tipo_lideranca: form.tipo_lideranca || null,
         nivel: form.nivel || null, regiao_atuacao: form.regiao_atuacao || null,
@@ -140,7 +149,9 @@ export default function TabCadastrar({ onSaved }: Props) {
         apoiadores_estimados: form.apoiadores_estimados ? parseInt(form.apoiadores_estimados) : null,
         meta_votos: form.meta_votos ? parseInt(form.meta_votos) : null,
         status: form.status, nivel_comprometimento: form.nivel_comprometimento || null,
-        observacoes: form.observacoes || null, cadastrado_por: usuario?.id || null,
+        observacoes: form.observacoes || null, 
+        cadastrado_por: usuario?.id || null,
+        suplente_id: suplenteId,
       });
       if (lError) throw lError;
 

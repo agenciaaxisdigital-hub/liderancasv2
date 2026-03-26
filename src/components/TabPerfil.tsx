@@ -1,21 +1,37 @@
 import { useState, useEffect } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth, TipoUsuario } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-import { LogOut, Shield, User, UserPlus, Loader2 } from 'lucide-react';
+import { LogOut, Shield, User, UserPlus, Loader2, Crown, Users, Eye } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 
+const tipoLabels: Record<TipoUsuario, string> = {
+  super_admin: 'Super Admin',
+  coordenador: 'Coordenador',
+  suplente: 'Suplente',
+  lideranca: 'Liderança',
+  fiscal: 'Fiscal',
+};
+
+const tipoIcons: Record<TipoUsuario, typeof Shield> = {
+  super_admin: Crown,
+  coordenador: Shield,
+  suplente: User,
+  lideranca: Users,
+  fiscal: Eye,
+};
+
 export default function TabPerfil() {
-  const { usuario, isAdmin, signOut } = useAuth();
+  const { usuario, isAdmin, tipoUsuario, signOut } = useAuth();
   const [usuarios, setUsuarios] = useState<{ id: string; nome: string; tipo: string; criado_em: string }[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [novoNome, setNovoNome] = useState('');
   const [novoSenha, setNovoSenha] = useState('');
-  const [novoTipo, setNovoTipo] = useState<'agente' | 'admin'>('agente');
+  const [novoTipo, setNovoTipo] = useState<string>('suplente');
   const [criando, setCriando] = useState(false);
 
   const fetchUsuarios = async () => {
-    const { data } = await supabase.from('usuarios').select('id, nome, tipo, criado_em');
+    const { data } = await supabase.from('hierarquia_usuarios').select('id, nome, tipo, criado_em').eq('ativo', true).order('criado_em', { ascending: false });
     if (data) setUsuarios(data);
     setLoaded(true);
   };
@@ -29,12 +45,12 @@ export default function TabPerfil() {
     setCriando(true);
     try {
       const { data, error } = await supabase.functions.invoke('criar-usuario', {
-        body: { nome: novoNome.trim(), senha: novoSenha, tipo: novoTipo },
+        body: { nome: novoNome.trim(), senha: novoSenha, tipo: novoTipo, superior_id: usuario?.id },
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
       toast({ title: `✅ Usuário "${novoNome.trim()}" criado!` });
-      setNovoNome(''); setNovoSenha(''); setNovoTipo('agente'); setShowForm(false);
+      setNovoNome(''); setNovoSenha(''); setNovoTipo('suplente'); setShowForm(false);
       fetchUsuarios();
     } catch (err: any) {
       toast({ title: 'Erro ao criar', description: err.message, variant: 'destructive' });
@@ -43,15 +59,17 @@ export default function TabPerfil() {
 
   const inputCls = "w-full h-10 px-3 bg-card border border-border rounded-xl text-sm text-foreground outline-none focus:ring-2 focus:ring-primary/30";
 
+  const IconComponent = tipoUsuario ? tipoIcons[tipoUsuario] : User;
+
   return (
     <div className="space-y-4 pb-24">
       <div className="section-card flex flex-col items-center text-center">
         <div className="w-16 h-16 rounded-full gradient-primary flex items-center justify-center">
-          {usuario?.tipo === 'admin' ? <Shield size={28} className="text-white" /> : <User size={28} className="text-white" />}
+          <IconComponent size={28} className="text-white" />
         </div>
         <h2 className="text-lg font-bold text-foreground mt-3">{usuario?.nome || '—'}</h2>
         <span className="inline-flex items-center px-3 py-1 rounded-full bg-secondary text-secondary-foreground text-xs font-semibold uppercase tracking-wider mt-1">
-          {usuario?.tipo === 'admin' ? 'Administrador' : 'Agente de Campo'}
+          {tipoUsuario ? tipoLabels[tipoUsuario] : '—'}
         </span>
       </div>
 
@@ -74,15 +92,13 @@ export default function TabPerfil() {
               <p className="text-xs font-semibold text-foreground">Criar novo usuário</p>
               <input type="text" value={novoNome} onChange={e => setNovoNome(e.target.value)} placeholder="Nome do usuário" className={inputCls} />
               <input type="text" value={novoSenha} onChange={e => setNovoSenha(e.target.value)} placeholder="Senha" className={inputCls} />
-              <div className="flex gap-2">
-                <button onClick={() => setNovoTipo('agente')}
-                  className={`flex-1 h-9 rounded-xl text-xs font-medium border transition-all ${novoTipo === 'agente' ? 'bg-primary text-primary-foreground border-primary' : 'bg-card text-muted-foreground border-border'}`}>
-                  Agente de Campo
-                </button>
-                <button onClick={() => setNovoTipo('admin')}
-                  className={`flex-1 h-9 rounded-xl text-xs font-medium border transition-all ${novoTipo === 'admin' ? 'bg-primary text-primary-foreground border-primary' : 'bg-card text-muted-foreground border-border'}`}>
-                  Administrador
-                </button>
+              <div className="grid grid-cols-2 gap-2">
+                {(['suplente', 'coordenador', 'lideranca', 'fiscal'] as const).map(t => (
+                  <button key={t} onClick={() => setNovoTipo(t)}
+                    className={`h-9 rounded-xl text-xs font-medium border transition-all ${novoTipo === t ? 'bg-primary text-primary-foreground border-primary' : 'bg-card text-muted-foreground border-border'}`}>
+                    {tipoLabels[t]}
+                  </button>
+                ))}
               </div>
               <button onClick={handleCriar} disabled={criando || !novoNome.trim() || !novoSenha.trim()}
                 className="w-full h-10 rounded-xl text-sm font-semibold bg-primary text-primary-foreground disabled:opacity-50 active:scale-[0.97] transition-all flex items-center justify-center gap-2">
@@ -100,10 +116,10 @@ export default function TabPerfil() {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <p className="text-sm font-semibold text-foreground truncate">{u.nome}</p>
-                    {u.tipo === 'admin' && <Shield size={12} className="text-primary shrink-0" />}
+                    {(u.tipo === 'super_admin' || u.tipo === 'coordenador') && <Shield size={12} className="text-primary shrink-0" />}
                   </div>
                   <p className="text-[10px] text-muted-foreground">
-                    {u.tipo === 'admin' ? 'Administrador' : 'Agente de Campo'} · Desde {new Date(u.criado_em).toLocaleDateString('pt-BR')}
+                    {tipoLabels[u.tipo as TipoUsuario] || u.tipo} · Desde {new Date(u.criado_em).toLocaleDateString('pt-BR')}
                   </p>
                 </div>
               </div>
@@ -117,7 +133,7 @@ export default function TabPerfil() {
         <LogOut size={18} /> Sair
       </button>
 
-      <p className="text-center text-[10px] text-muted-foreground">v1.0 · Lideranças – Dra. Fernanda Sarelli</p>
+      <p className="text-center text-[10px] text-muted-foreground">v2.0 · Rede Política – Dra. Fernanda Sarelli</p>
     </div>
   );
 }

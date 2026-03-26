@@ -11,7 +11,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { nome, senha, tipo } = await req.json();
+    const { nome, senha, tipo, superior_id, suplente_id } = await req.json();
 
     if (!nome || !senha) {
       return new Response(
@@ -27,7 +27,7 @@ Deno.serve(async (req) => {
 
     // Create email from nome
     const slug = nome.toLowerCase().trim().replace(/\s+/g, '.').replace(/[^a-z0-9.]/g, '');
-    const email = `${slug}@liderancas.app`;
+    const email = `${slug}@rede.sarelli.com`;
 
     // Create auth user
     const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
@@ -44,27 +44,37 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Create usuario record
-    const { error: userError } = await supabaseAdmin
-      .from('usuarios')
+    // Create hierarquia_usuarios record
+    const tipoUsuario = tipo || 'suplente';
+    const { data: hierarquiaData, error: hierarquiaError } = await supabaseAdmin
+      .from('hierarquia_usuarios')
       .insert({
         auth_user_id: authData.user.id,
         nome: nome.trim(),
-        tipo: tipo || 'agente',
-      });
+        tipo: tipoUsuario,
+        superior_id: superior_id || null,
+        suplente_id: suplente_id || null,
+      })
+      .select('id')
+      .single();
 
-    if (userError) {
-      console.error('User insert error:', userError);
+    if (hierarquiaError) {
+      console.error('Hierarquia insert error:', hierarquiaError);
       // Rollback auth user
       await supabaseAdmin.auth.admin.deleteUser(authData.user.id);
       return new Response(
-        JSON.stringify({ error: userError.message }),
+        JSON.stringify({ error: hierarquiaError.message }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
     return new Response(
-      JSON.stringify({ success: true, message: `Usuário "${nome}" criado com sucesso` }),
+      JSON.stringify({ 
+        success: true, 
+        message: `Usuário "${nome}" criado com sucesso`,
+        hierarquia_id: hierarquiaData.id,
+        auth_user_id: authData.user.id,
+      }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {

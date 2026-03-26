@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Search, ChevronRight, Phone, MessageCircle, Edit, Trash2, ArrowLeft, XCircle } from 'lucide-react';
+import { Search, ChevronRight, Phone, MessageCircle, Trash2, ArrowLeft, XCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { maskCPF } from '@/lib/cpf';
@@ -16,9 +16,10 @@ interface LiderancaRow {
   zona_atuacao: string | null;
   apoiadores_estimados: number | null;
   cadastrado_por: string | null;
+  suplente_id: string | null;
   criado_em: string;
   pessoas: { nome: string; cpf: string | null; telefone: string | null; whatsapp: string | null; email: string | null; instagram: string | null; facebook: string | null; titulo_eleitor: string | null; zona_eleitoral: string | null; secao_eleitoral: string | null; municipio_eleitoral: string | null; uf_eleitoral: string | null; colegio_eleitoral: string | null; endereco_colegio: string | null; situacao_titulo: string | null; };
-  usuarios: { nome: string } | null;
+  hierarquia_usuarios: { nome: string } | null;
   regiao_atuacao: string | null;
   bairros_influencia: string | null;
   comunidades_influencia: string | null;
@@ -47,14 +48,21 @@ export default function TabLiderancas({ refreshKey }: Props) {
     setLoading(true);
     const { data, error } = await supabase
       .from('liderancas')
-      .select('id, status, tipo_lideranca, nivel, zona_atuacao, apoiadores_estimados, cadastrado_por, criado_em, regiao_atuacao, bairros_influencia, comunidades_influencia, origem_captacao, meta_votos, nivel_comprometimento, observacoes, pessoas(*), usuarios(nome)')
+      .select('id, status, tipo_lideranca, nivel, zona_atuacao, apoiadores_estimados, cadastrado_por, suplente_id, criado_em, regiao_atuacao, bairros_influencia, comunidades_influencia, origem_captacao, meta_votos, nivel_comprometimento, observacoes, pessoas(*), hierarquia_usuarios!liderancas_cadastrado_por_fkey(nome)')
       .order('criado_em', { ascending: false });
     if (!error && data) setData(data as unknown as LiderancaRow[]);
     setLoading(false);
   }, [usuario]);
 
   useEffect(() => { fetchData(); }, [fetchData, refreshKey]);
-  useEffect(() => { if (isAdmin) supabase.from('usuarios').select('id, nome').eq('tipo', 'agente').then(({ data }) => { if (data) setAgentes(data); }); }, [isAdmin]);
+  
+  useEffect(() => { 
+    if (isAdmin) {
+      supabase.from('hierarquia_usuarios').select('id, nome').in('tipo', ['suplente', 'lideranca', 'coordenador']).then(({ data }) => { 
+        if (data) setAgentes(data); 
+      }); 
+    }
+  }, [isAdmin]);
 
   const filtered = data.filter(l => {
     if (statusFilter !== 'Todas' && l.status !== statusFilter) return false;
@@ -107,15 +115,14 @@ export default function TabLiderancas({ refreshKey }: Props) {
           <ArrowLeft size={16} /> Voltar à lista
         </button>
 
-        {/* Header */}
         <div className="section-card">
           <div className="flex items-start justify-between">
             <div>
               <h2 className="text-lg font-bold text-foreground">{p.nome}</h2>
               <p className="text-sm text-muted-foreground">{l.tipo_lideranca}{l.nivel ? ` · ${l.nivel}` : ''}</p>
-              {isAdmin && l.usuarios && (
+              {isAdmin && l.hierarquia_usuarios && (
                 <p className="text-[10px] text-primary/70 mt-1">
-                  Por: {l.usuarios.nome} · {new Date(l.criado_em).toLocaleDateString('pt-BR')}
+                  Por: {l.hierarquia_usuarios.nome} · {new Date(l.criado_em).toLocaleDateString('pt-BR')}
                 </p>
               )}
             </div>
@@ -188,7 +195,6 @@ export default function TabLiderancas({ refreshKey }: Props) {
   // ===== LIST VIEW =====
   return (
     <div className="space-y-3 pb-24">
-      {/* Search */}
       <div className="relative">
         <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
         <input
@@ -198,7 +204,6 @@ export default function TabLiderancas({ refreshKey }: Props) {
         />
       </div>
 
-      {/* Status chips */}
       <div className="flex gap-1.5 overflow-x-auto pb-1 -mx-1 px-1">
         {statusFilters.map(s => (
           <button key={s} onClick={() => setStatusFilter(s)}
@@ -210,7 +215,6 @@ export default function TabLiderancas({ refreshKey }: Props) {
         ))}
       </div>
 
-      {/* Admin filters */}
       {isAdmin && (
         <select value={agenteFilter} onChange={e => setAgenteFilter(e.target.value)}
           className="w-full h-10 px-3 bg-card border border-border rounded-xl text-sm text-foreground outline-none">
@@ -219,7 +223,6 @@ export default function TabLiderancas({ refreshKey }: Props) {
         </select>
       )}
 
-      {/* Stats */}
       {isAdmin && (
         <div className="grid grid-cols-3 gap-2">
           {[
@@ -235,10 +238,8 @@ export default function TabLiderancas({ refreshKey }: Props) {
         </div>
       )}
 
-      {/* Results count */}
       <p className="text-xs text-muted-foreground">{filtered.length} liderança{filtered.length !== 1 ? 's' : ''}</p>
 
-      {/* List */}
       {loading ? (
         <div className="space-y-3">
           {[1,2,3].map(i => <div key={i} className="section-card animate-pulse"><div className="h-4 bg-muted rounded w-2/3" /><div className="h-3 bg-muted rounded w-1/2 mt-2" /></div>)}
@@ -261,8 +262,8 @@ export default function TabLiderancas({ refreshKey }: Props) {
                   {l.tipo_lideranca || '—'}{l.zona_atuacao ? ` · Z${l.zona_atuacao}` : ''}
                   {l.apoiadores_estimados ? ` · ${l.apoiadores_estimados} apoiadores` : ''}
                 </p>
-                {isAdmin && l.usuarios && (
-                  <p className="text-[10px] text-primary/60 mt-0.5">Por: {l.usuarios.nome}</p>
+                {isAdmin && l.hierarquia_usuarios && (
+                  <p className="text-[10px] text-primary/60 mt-0.5">Por: {l.hierarquia_usuarios.nome}</p>
                 )}
               </div>
               <ChevronRight size={16} className="text-muted-foreground shrink-0" />

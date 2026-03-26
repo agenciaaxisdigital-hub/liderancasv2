@@ -2,48 +2,57 @@ import { createContext, useContext, useEffect, useState, ReactNode } from 'react
 import { supabase } from '@/integrations/supabase/client';
 import type { User } from '@supabase/supabase-js';
 
-interface Usuario {
+export type TipoUsuario = 'super_admin' | 'coordenador' | 'suplente' | 'lideranca' | 'fiscal';
+
+interface HierarquiaUsuario {
   id: string;
   auth_user_id: string;
   nome: string;
-  tipo: 'admin' | 'agente';
+  tipo: TipoUsuario;
+  superior_id: string | null;
+  suplente_id: string | null;
+  ativo: boolean;
 }
 
 interface AuthContextType {
   user: User | null;
-  usuario: Usuario | null;
+  usuario: HierarquiaUsuario | null;
   loading: boolean;
   isAdmin: boolean;
+  isSuplente: boolean;
+  isLideranca: boolean;
+  isFiscal: boolean;
+  tipoUsuario: TipoUsuario | null;
   signIn: (nome: string, password: string) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Convert username to a fake email for Supabase Auth
 function nomeToEmail(nome: string): string {
   const slug = nome.toLowerCase().trim().replace(/\s+/g, '.').replace(/[^a-z0-9.]/g, '');
-  return `${slug}@liderancas.app`;
+  return `${slug}@rede.sarelli.com`;
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [usuario, setUsuario] = useState<Usuario | null>(null);
+  const [usuario, setUsuario] = useState<HierarquiaUsuario | null>(null);
   const [loading, setLoading] = useState(true);
 
   const fetchUsuario = async (authUserId: string) => {
     const { data } = await supabase
-      .from('usuarios')
+      .from('hierarquia_usuarios')
       .select('*')
       .eq('auth_user_id', authUserId)
+      .eq('ativo', true)
       .single();
     if (data) {
-      setUsuario(data as unknown as Usuario);
+      setUsuario(data as unknown as HierarquiaUsuario);
     }
   };
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       setUser(session?.user ?? null);
       if (session?.user) {
         setTimeout(() => fetchUsuario(session.user.id), 0);
@@ -76,12 +85,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUsuario(null);
   };
 
+  const tipo = usuario?.tipo ?? null;
+
   return (
     <AuthContext.Provider value={{
       user,
       usuario,
       loading,
-      isAdmin: usuario?.tipo === 'admin',
+      isAdmin: tipo === 'super_admin' || tipo === 'coordenador',
+      isSuplente: tipo === 'suplente',
+      isLideranca: tipo === 'lideranca',
+      isFiscal: tipo === 'fiscal',
+      tipoUsuario: tipo,
       signIn,
       signOut,
     }}>

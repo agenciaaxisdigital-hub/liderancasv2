@@ -1,8 +1,8 @@
-import { PlusCircle, List, UserCircle, BarChart3 } from 'lucide-react';
+import { PlusCircle, List, UserCircle, BarChart3, Shield, Users } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 
-export type TabId = 'cadastrar' | 'liderancas' | 'perfil';
+export type TabId = 'cadastrar' | 'liderancas' | 'fiscais' | 'eleitores' | 'perfil';
 
 interface Props {
   active: TabId;
@@ -10,14 +10,31 @@ interface Props {
 }
 
 export default function BottomNav({ active, onChange }: Props) {
-  const { isAdmin } = useAuth();
+  const { isAdmin, tipoUsuario } = useAuth();
   const navigate = useNavigate();
 
-  const tabs: { id: TabId; icon: typeof PlusCircle; label: string }[] = [
-    { id: 'cadastrar', icon: PlusCircle, label: 'Cadastrar' },
-    { id: 'liderancas', icon: List, label: isAdmin ? 'Todas' : 'Minhas' },
-    { id: 'perfil', icon: UserCircle, label: 'Perfil' },
-  ];
+  // Build tabs dynamically based on user type
+  const tabs: { id: TabId; icon: typeof PlusCircle; label: string }[] = [];
+
+  // Everyone can register (different things based on type)
+  tabs.push({ id: 'cadastrar', icon: PlusCircle, label: 'Cadastrar' });
+
+  // Suplentes, coordenadores and admins see lideranças
+  if (tipoUsuario === 'super_admin' || tipoUsuario === 'coordenador' || tipoUsuario === 'suplente') {
+    tabs.push({ id: 'liderancas', icon: List, label: 'Lideranças' });
+  }
+
+  // Suplentes, lideranças, coordenadores and admins see fiscais
+  if (tipoUsuario === 'super_admin' || tipoUsuario === 'coordenador' || tipoUsuario === 'suplente' || tipoUsuario === 'lideranca') {
+    tabs.push({ id: 'fiscais', icon: Shield, label: 'Fiscais' });
+  }
+
+  // Everyone except super_admin sees eleitores tab (fiscais register voters)
+  if (tipoUsuario === 'super_admin' || tipoUsuario === 'coordenador' || tipoUsuario === 'suplente' || tipoUsuario === 'lideranca' || tipoUsuario === 'fiscal') {
+    tabs.push({ id: 'eleitores', icon: Users, label: 'Eleitores' });
+  }
+
+  tabs.push({ id: 'perfil', icon: UserCircle, label: 'Perfil' });
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 bg-card/95 backdrop-blur-xl border-t border-border safe-bottom">
@@ -28,24 +45,22 @@ export default function BottomNav({ active, onChange }: Props) {
             <button
               key={id}
               onClick={() => onChange(id)}
-              className={`flex flex-col items-center gap-0.5 px-4 py-1.5 rounded-xl transition-all active:scale-90 ${
-                isActive
-                  ? 'text-primary'
-                  : 'text-muted-foreground'
+              className={`flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl transition-all active:scale-90 ${
+                isActive ? 'text-primary' : 'text-muted-foreground'
               }`}
             >
-              <Icon size={24} strokeWidth={isActive ? 2.5 : 1.5} />
-              <span className={`text-[11px] ${isActive ? 'font-bold' : 'font-medium'}`}>{label}</span>
+              <Icon size={22} strokeWidth={isActive ? 2.5 : 1.5} />
+              <span className={`text-[10px] ${isActive ? 'font-bold' : 'font-medium'}`}>{label}</span>
             </button>
           );
         })}
         {isAdmin && (
           <button
             onClick={() => navigate('/admin')}
-            className="flex flex-col items-center gap-0.5 px-4 py-1.5 rounded-xl transition-all active:scale-90 text-muted-foreground"
+            className="flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl transition-all active:scale-90 text-muted-foreground"
           >
-            <BarChart3 size={24} strokeWidth={1.5} />
-            <span className="text-[11px] font-medium">Dashboard</span>
+            <BarChart3 size={22} strokeWidth={1.5} />
+            <span className="text-[10px] font-medium">Dashboard</span>
           </button>
         )}
       </div>
