@@ -5,6 +5,7 @@ import TabCadastrar from '@/components/TabCadastrar';
 import TabLiderancas from '@/components/TabLiderancas';
 import TabFiscais from '@/components/TabFiscais';
 import TabEleitores from '@/components/TabEleitores';
+import TabRede from '@/components/TabRede';
 import TabPerfil from '@/components/TabPerfil';
 
 const tabTitles: Record<TabId, string> = {
@@ -12,6 +13,7 @@ const tabTitles: Record<TabId, string> = {
   liderancas: 'Lideranças',
   fiscais: 'Fiscais',
   eleitores: 'Possíveis Eleitores',
+  rede: 'Rede por Suplente',
   perfil: 'Perfil',
 };
 
