@@ -1,55 +1,65 @@
-import { useState, useEffect } from "react";
-import { Download } from "lucide-react";
+﻿import { useState, useEffect } from 'react';
+import { Download } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { toast } from 'sonner';
 
 export default function InstallPWA() {
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
-  const [isVisible, setIsVisible] = useState(false);
+  const [isInstallable, setIsInstallable] = useState(false);
+  const [isInstalled, setIsInstalled] = useState(false);
 
   useEffect(() => {
-    const handler = (e: Event) => {
-      // Prevent the mini-infobar from appearing on mobile
-      e.preventDefault();
-      // Stash the event so it can be triggered later.
-      setDeferredPrompt(e);
-      // Update UI notify the user they can install the PWA
-      setIsVisible(true);
-    };
-
-    window.addEventListener("beforeinstallprompt", handler);
-
-    // Verifica se já está instalado
-    if (window.matchMedia('(display-mode: standalone)').matches) {
-       setIsVisible(false);
+    // Check if already installed
+    if (window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone === true) {
+      setIsInstalled(true);
     }
 
-    return () => window.removeEventListener("beforeinstallprompt", handler);
+    const handleBeforeInstallPrompt = (e: any) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+      setIsInstallable(true);
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    
+    window.addEventListener('appinstalled', () => {
+      setIsInstalled(true);
+      setIsInstallable(false);
+      toast.success('Aplicativo instalado com sucesso!');
+    });
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    };
   }, []);
 
   const handleInstallClick = async () => {
-    if (!deferredPrompt) return;
-    
-    // Show the install prompt
-    deferredPrompt.prompt();
-    
-    // Wait for the user to respond to the prompt
-    const { outcome } = await deferredPrompt.userChoice;
-    
-    if (outcome === 'accepted') {
-      setIsVisible(false);
+    if (!deferredPrompt) {
+       toast.info('O aplicativo já está instalado ou seu navegador não suporta a instalação rápida.');
+       return;
     }
-    
-    setDeferredPrompt(null);
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    if (outcome === 'accepted') {
+      setDeferredPrompt(null);
+      setIsInstallable(false);
+    } else {
+      toast.info('Instalação cancelada pelo usuário.');
+    }
   };
 
-  if (!isVisible) return null;
+  if (isInstalled) return null;
 
   return (
-    <button
+    <Button 
       onClick={handleInstallClick}
-      className="fixed bottom-6 left-6 z-50 flex items-center gap-2 bg-gradient-to-r from-pink-600 to-purple-600 text-white px-4 py-2 rounded-full shadow-lg hover:shadow-pink-500/25 hover:scale-105 transition-all duration-300"
+      variant="outline" 
+      size="sm"
+      className="fixed top-4 right-4 z-50 bg-background/80 backdrop-blur-sm border-primary/20 hover:bg-primary/10 transition-all flex items-center gap-2 shadow-lg"
     >
-      <Download size={18} className="animate-bounce" />
-      <span className="font-semibold text-sm">Instalar App</span>
-    </button>
+      <Download className="w-4 h-4 text-primary animate-bounce" />
+      <span className="hidden sm:inline font-medium text-sm">Instalar App</span>
+    </Button>
   );
 }
+
